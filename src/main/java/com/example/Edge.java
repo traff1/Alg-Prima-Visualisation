@@ -6,9 +6,11 @@ import java.io.Serializable;
 public class Edge {
     Vertex start;
     Vertex end;
+    String colorE = "Black";
     int weight;
     int screenWidth;
     int screenHeight;
+    private boolean isInMst = false;
 
     Edge(Vertex start, Vertex end, int weight, int screenWidth, int screenHeight) {
         this.start = start;
@@ -51,4 +53,30 @@ public class Edge {
         double closestY = startLoc.y + t * dy;
         return p.distance(closestX, closestY);
     }
+    Vertex getStartVertex() {
+        return start;
+    }
+    Vertex getEndVertex() {
+        return end;
+    }
+    int getWeight() {
+        return weight;
+    }
+
+    String getColorE() {
+        return colorE;
+    }
+
+    void setColorE(String colorE) {
+        this.colorE = colorE;
+    }
+
+    public void setInMst(boolean isInMst) {
+        this.isInMst = isInMst;
+    }
+
+    public boolean isInMst() {
+        return isInMst;
+    }
+
 }

@@ -2,9 +2,11 @@ package com.example;
 
 import java.awt.*;
 import java.io.Serializable;
+import java.util.UUID;
 
-public class Vertex extends Point {
+public class Vertex extends Point implements Serializable{
     int number;
+    String colorV = "Black";
     double relativeX;
     double relativeY;
     private static final int VERTEX_RADIUS = 25;
@@ -38,5 +40,17 @@ public class Vertex extends Point {
     void updateAbsoluteCoordinates(int screenWidth, int screenHeight) {
         this.x = (int) (relativeX * screenWidth);
         this.y = (int) (relativeY * screenHeight);
+    }
+
+    int getNumber() {
+        return number;
+    }
+
+    String getColorV() {
+        return colorV;
+    }
+
+    void setColorV(String colorV) {
+        this.colorV = colorV;
     }
 }

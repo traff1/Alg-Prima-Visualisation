@@ -48,8 +48,8 @@ public class MainWindow {
         overlayPanel.add(backgroundPanel, JLayeredPane.DEFAULT_LAYER);
 
         CalculatorNavigation calculatorNavigation = new CalculatorNavigation();
-        ToolBarItems toolBarItems = new ToolBarItems();
-        RoundedRectangleCalculatorComponent roundedRectangleCalculatorComponent = new RoundedRectangleCalculatorComponent(calculatorNavigation, toolBarItems);
+        RoundedRectangleCalculatorComponent roundedRectangleCalculatorComponent = new RoundedRectangleCalculatorComponent(calculatorNavigation);
+        ToolBarItems toolBarItems = new ToolBarItems(roundedRectangleCalculatorComponent);
         RoundedRectangleStepComponent roundedRectangleStepComponent = new RoundedRectangleStepComponent();
         RoundedRectangleTollBarComponent roundedRectangleTollBarComponent = new RoundedRectangleTollBarComponent();
         DelimiterLineCalculator delimiterLineCalculatorLine = new DelimiterLineCalculator();
@@ -66,6 +66,7 @@ public class MainWindow {
         overlayPanel.add(calculatorNavigation, JLayeredPane.MODAL_LAYER);
         overlayPanel.add(toolBarItems, JLayeredPane.MODAL_LAYER);
         overlayPanel.add(stepsText, JLayeredPane.MODAL_LAYER);
+
 
 
         // Add the panel to the frame
