@@ -12,18 +12,31 @@ public class RoundedRectangleCalculatorComponent extends JComponent {
 
     private ArrayList<Vertex> vertices = new ArrayList<>();
     private ArrayList<Edge> edges = new ArrayList<>();
+    private ArrayList<String> steps = new ArrayList<>();
+    public Graph graph;
+    public ArrayList<Edge> mst = new ArrayList<>();;
     private Vertex hoveredVertex = null;
     private Vertex selectedVertex = null;
+    private Edge selectedEdge = null;
     private Edge hoveredEdge = null;
     private CalculatorNavigation navigation;
     private ToolBarItems toolBarItems;
     private int vertexCounter = 0;
     private static final int VERTEX_RADIUS = 25;
     private static final double EDGE_ADJUSTMENT_FACTOR = 1.1;
+    public boolean actionMenu = false;
+    public boolean actionRun = false;
+    public boolean actionSteps = false;
+    public boolean actionDownload = false;
+    public boolean actionSave = false;
+    public boolean actionPreviousStep = false;
+    public boolean actionNextStep = false;
 
-    public RoundedRectangleCalculatorComponent(CalculatorNavigation navigation, ToolBarItems toolBarItems) {
+    private boolean algPrimaSelected = false;
+
+    public RoundedRectangleCalculatorComponent(CalculatorNavigation navigation) {
         this.navigation = navigation;
-        this.toolBarItems = toolBarItems;
+
 
         addMouseListener(new MouseAdapter() {
             @Override
@@ -60,6 +73,10 @@ public class RoundedRectangleCalculatorComponent extends JComponent {
         int screenWidth = getWidth();
         int screenHeight = getHeight();
 
+        if (e.getSource() == navigation.plusButton || e.getSource() == navigation.urnButton || e.getSource() == navigation.arrowButton) {
+            resetMst();
+        }
+
         if (navigation.isPlusButtonPressed()) {
             if (e.getX() > (int) (getWidth() * 5 / 100) && e.getY() > (int) (19.5 * getHeight() / 100) && (e.getX() < (int) (getWidth() * 62.5 / 100) && e.getY() < (int) (79.5 * getHeight() / 100))) {
                 Vertex vertex = new Vertex(e.getPoint(), ++vertexCounter, screenWidth, screenHeight);
@@ -67,6 +84,7 @@ public class RoundedRectangleCalculatorComponent extends JComponent {
                 repaint();
             }
         } else if (navigation.isUrnButtonPressed()) {
+            resetMst();
             Vertex vertexToRemove = null;
             for (Vertex vertex : vertices) {
                 if (vertex.contains(e.getPoint(), screenWidth, screenHeight)) {
@@ -100,6 +118,7 @@ public class RoundedRectangleCalculatorComponent extends JComponent {
                 }
             }
         } else if (navigation.isArrowButtonPressed()) {
+            resetMst();
             boolean vertexClicked = false;
             for (Vertex vertex : vertices) {
                 if (vertex.contains(e.getPoint(), screenWidth, screenHeight)) {
@@ -122,21 +141,22 @@ public class RoundedRectangleCalculatorComponent extends JComponent {
             if (!vertexClicked) {
                 selectedVertex = null;
             }
-        } else if (toolBarItems.isDownloadButtonPressed()) {
-            deserializeGraph("./src/main/resources/graph_data.ser");
-        } else if (toolBarItems.isUploadButtonPressed()) {
-            System.out.println("gsadg");
-            serializeGraph(vertices, edges, "./src/main/resources/graph_data.ser");
         } else {
             selectedVertex = null;
+            resetMst(); // Сбрасываем MST при нажатии на пустое место
         }
     }
+
+
 
     private void handleMouseReleased(MouseEvent e) {
         if (navigation.isHandButtonPressed()) {
             selectedVertex = null;
+        } else {
+            resetMst(); // Сбрасываем MST при отпускании мыши, если не выбрана кнопка "Рука"
         }
     }
+
 
     private void handleMouseDragged(MouseEvent e) {
         int screenWidth = getWidth();
@@ -185,6 +205,7 @@ public class RoundedRectangleCalculatorComponent extends JComponent {
         repaint();
     }
 
+
     private void handleResize() {
         int screenWidth = getWidth();
         int screenHeight = getHeight();
@@ -202,8 +223,11 @@ public class RoundedRectangleCalculatorComponent extends JComponent {
 
 
     private boolean isPointOnEdge(Point p, Edge edge) {
-        double distance = edge.ptSegDist(p);
-        return distance < 5.0;
+        Point start = calculateIntersection(edge.start, edge.end);
+        Point end = calculateIntersection(edge.end, edge.start);
+
+        double distance = ptSegDist(start.x, start.y, end.x, end.y, p.x, p.y);
+        return distance <= 3.0;
     }
 
     @Override
@@ -234,6 +258,8 @@ public class RoundedRectangleCalculatorComponent extends JComponent {
 
             if (edge.equals(hoveredEdge)) {
                 g2d.setColor(Color.LIGHT_GRAY);
+            } else if (edge.isInMst()) {
+                g2d.setColor(Color.WHITE); // Рисуем MST рёбра белым цветом
             } else {
                 g2d.setColor(Color.BLACK);
             }
@@ -255,16 +281,37 @@ public class RoundedRectangleCalculatorComponent extends JComponent {
                 AffineTransform originalTransform = g2d.getTransform();
 
                 g2d.rotate(angle, rectX + rectWidth / 2, rectY + rectHeight / 2);
+                if (edge.equals(hoveredEdge)) {
+                    g2d.setColor(Color.LIGHT_GRAY);
+                    g2d.fillRect(rectX, rectY, rectWidth, rectHeight);
 
-                g2d.setColor(Color.BLACK);
-                g2d.fillRect(rectX, rectY, rectWidth, rectHeight);
+                    g2d.setColor(Color.BLACK);
+                    FontMetrics fm = g2d.getFontMetrics();
+                    String weightStr = String.valueOf(edge.weight);
+                    int textWidth = fm.stringWidth(weightStr);
+                    int textHeight = fm.getHeight();
+                    g2d.drawString(weightStr, rectX + (rectWidth - textWidth) / 2, rectY + (rectHeight + textHeight) / 2 - 5);
+                } else if (edge.isInMst()) {
+                    g2d.setColor(Color.WHITE);
+                    g2d.fillRect(rectX, rectY, rectWidth, rectHeight);
 
-                g2d.setColor(Color.WHITE);
-                FontMetrics fm = g2d.getFontMetrics();
-                String weightStr = String.valueOf(edge.weight);
-                int textWidth = fm.stringWidth(weightStr);
-                int textHeight = fm.getHeight();
-                g2d.drawString(weightStr, rectX + (rectWidth - textWidth) / 2, rectY + (rectHeight + textHeight) / 2 - 5);
+                    g2d.setColor(Color.BLACK);
+                    FontMetrics fm = g2d.getFontMetrics();
+                    String weightStr = String.valueOf(edge.weight);
+                    int textWidth = fm.stringWidth(weightStr);
+                    int textHeight = fm.getHeight();
+                    g2d.drawString(weightStr, rectX + (rectWidth - textWidth) / 2, rectY + (rectHeight + textHeight) / 2 - 5);
+                } else {
+                    g2d.setColor(Color.BLACK);
+                    g2d.fillRect(rectX, rectY, rectWidth, rectHeight);
+
+                    g2d.setColor(Color.WHITE);
+                    FontMetrics fm = g2d.getFontMetrics();
+                    String weightStr = String.valueOf(edge.weight);
+                    int textWidth = fm.stringWidth(weightStr);
+                    int textHeight = fm.getHeight();
+                    g2d.drawString(weightStr, rectX + (rectWidth - textWidth) / 2, rectY + (rectHeight + textHeight) / 2 - 5);
+                }
 
                 g2d.setTransform(originalTransform);
             }
@@ -272,14 +319,16 @@ public class RoundedRectangleCalculatorComponent extends JComponent {
 
         for (Vertex vertex : vertices) {
             Point absoluteLocation = vertex.getAbsoluteLocation(getWidth(), getHeight());
-
             if (vertex.equals(hoveredVertex) || vertex.equals(selectedVertex)) {
                 g2d.setColor(Color.LIGHT_GRAY);
+            } else if (isVertexInMst(vertex)) {
+                g2d.setColor(Color.WHITE);
             } else {
                 g2d.setColor(Color.BLACK);
             }
             g2d.setStroke(new BasicStroke(3));
             g2d.drawOval(absoluteLocation.x - VERTEX_RADIUS, absoluteLocation.y - VERTEX_RADIUS, VERTEX_RADIUS * 2, VERTEX_RADIUS * 2);
+
 
             g2d.setColor(Color.WHITE);
             FontMetrics fm = g2d.getFontMetrics();
@@ -288,7 +337,17 @@ public class RoundedRectangleCalculatorComponent extends JComponent {
             int textHeight = fm.getHeight();
             g2d.drawString(numberStr, absoluteLocation.x - (textWidth / 2), absoluteLocation.y + (textHeight / 4));
         }
+
+        g2d.setColor(Color.WHITE);
+        g2d.setFont(new Font("Kodchasan-Bold", Font.PLAIN, 18));
+        int yPosition = 20*height_screen/100;  // Начальная вертикальная позиция для текста
+        for (String step : steps) {
+            g2d.drawString(step, (int) (68.5*width_screen/100), yPosition);  // Рисование строки на экране
+            yPosition += 20;  // Смещение вниз для следующей строки
+        }
     }
+
+
 
     private Point calculateIntersection(Vertex v1, Vertex v2) {
         Point v1Loc = v1.getAbsoluteLocation(getWidth(), getHeight());
@@ -306,24 +365,151 @@ public class RoundedRectangleCalculatorComponent extends JComponent {
         return digits * 10 + 25;
     }
 
-    public void serializeGraph(ArrayList<Vertex> vertices, ArrayList<Edge> edges, String filename) {
-        try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(filename))) {
-            out.writeObject(vertices);
-            out.writeObject(edges);
-            System.out.println("Граф успешно сохранён в файл " + filename);
+    public void showAlgorithmSelectionDialog() {
+        String[] algorithms = {"Prim's Algorithm"};
+        String selectedAlgorithm = (String) JOptionPane.showInputDialog(
+                null,
+                "Select the algorithm to use:",
+                "Algorithm Selection",
+                JOptionPane.QUESTION_MESSAGE,
+                null,
+                algorithms,
+                algorithms[0]
+        );
+
+        if (selectedAlgorithm != null) {
+            JOptionPane.showMessageDialog(null, "You selected: " + selectedAlgorithm);
+            // Process the selected algorithm (for now just Prim's Algorithm)
+            if (selectedAlgorithm.equals("Prim's Algorithm")) {
+                // Call the function that runs Prim's Algorithm
+                algPrimaSelected = true;
+            }
+        }
+    }
+
+    public void saveGraphToFile(String filename) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(filename))) {
+            // Сохраняем количество вершин
+            writer.write(vertices.size() + "\n");
+            for (Vertex vertex : vertices) {
+                writer.write(vertex.number + " " + vertex.relativeX + " " + vertex.relativeY + "\n");
+            }
+            // Сохраняем количество рёбер
+            writer.write(edges.size() + "\n");
+            for (Edge edge : edges) {
+                writer.write(edge.start.number + " " + edge.end.number + " " + edge.weight + "\n");
+            }
+            writer.flush();
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    public void deserializeGraph(String filename) {
-        try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(filename))) {
-            ArrayList<Vertex> vertices = (ArrayList<Vertex>) in.readObject();
-            ArrayList<Edge> edges = (ArrayList<Edge>) in.readObject();
-            System.out.println("Граф успешно загружен из файла " + filename);
-            // Используйте загруженные vertices и edges для восстановления состояния вашего графа
-        } catch (IOException | ClassNotFoundException e) {
+    public void loadGraphFromFile(String filename) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(filename))) {
+            vertices.clear();
+            edges.clear();
+
+            // Считываем количество вершин
+            int vertexCount = Integer.parseInt(reader.readLine().trim());
+            for (int i = 0; i < vertexCount; i++) {
+                String[] vertexData = reader.readLine().split(" ");
+                int number = Integer.parseInt(vertexData[0]);
+                double relativeX = Double.parseDouble(vertexData[1]);
+                double relativeY = Double.parseDouble(vertexData[2]);
+                Vertex vertex = new Vertex(new Point((int)(relativeX * getWidth()), (int)(relativeY * getHeight())), number, getWidth(), getHeight());
+                vertices.add(vertex);
+            }
+
+            // Считываем количество рёбер
+            int edgeCount = Integer.parseInt(reader.readLine().trim());
+            for (int i = 0; i < edgeCount; i++) {
+                String[] edgeData = reader.readLine().split(" ");
+                int startNumber = Integer.parseInt(edgeData[0]);
+                int endNumber = Integer.parseInt(edgeData[1]);
+                int weight = Integer.parseInt(edgeData[2]);
+                Vertex startVertex = findVertexByNumber(startNumber);
+                Vertex endVertex = findVertexByNumber(endNumber);
+                if (startVertex != null && endVertex != null) {
+                    edges.add(new Edge(startVertex, endVertex, weight, getWidth(), getHeight()));
+                }
+            }
+
+            repaint();
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }
+
+    private Vertex findVertexByNumber(int number) {
+        for (Vertex vertex : vertices) {
+            if (vertex.number == number) {
+                return vertex;
+            }
+        }
+        return null;
+    }
+
+    public Graph getGraph(){
+        return graph = new Graph(this.vertices, this.edges);
+    }
+
+    void setMst(ArrayList<Edge> edges){
+        mst = edges;
+        steps.clear();
+        for (Edge edge : this.edges) {
+            edge.setInMst(false); // Сначала сбросим поле для всех рёбер
+        }
+        for (Edge edge : mst) {
+            edge.setInMst(true); // Установим поле для рёбер из MST
+        }
+        String start = String.format("Algorithm started!");
+        steps.add(start);
+        for (int i = 0; i < mst.size(); i++) {
+            String step = String.format("Step №%d: Edge: %d - %d", i+1, mst.get(i).getStartVertex().getNumber(), mst.get(i).getEndVertex().getNumber());
+            steps.add(step);  // Сохраняем шаги
+        }
+        if (mst.size() == vertices.size()-1){
+            String end = String.format("Algorithm ended!");
+            steps.add(end);
+        }
+        repaint(); // Перерисовать компонент для отображения изменений
+    }
+
+    private boolean isVertexInMst(Vertex vertex) {
+        for (Edge edge : mst) {
+            if (edge.start.equals(vertex) || edge.end.equals(vertex)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public void resetMst() {
+        mst.clear();
+        for (Edge edge : edges) {
+            edge.setInMst(false);
+        }
+        repaint();
+    }
+
+
+    public static double ptSegDist(double x1, double y1, double x2, double y2, double px, double py) {
+        double x2x1 = x2 - x1;
+        double y2y1 = y2 - y1;
+        double x1px = x1 - px;
+        double y1py = y1 - py;
+        double dotprod = x1px * x2x1 + y1py * y2y1;
+        double projlenSq = dotprod * dotprod / (x2x1 * x2x1 + y2y1 * y2y1);
+        double lenSq = x1px * x1px + y1py * y1py - projlenSq;
+        if (projlenSq < 0.0) {
+            return Math.sqrt(x1px * x1px + y1py * y1py);
+        } else if (projlenSq > x2x1 * x2x1 + y2y1 * y2y1) {
+            double x2px = x2 - px;
+            double y2py = y2 - py;
+            return Math.sqrt(x2px * x2px + y2py * y2py);
+        }
+        return Math.sqrt(lenSq);
+    }
+
 }

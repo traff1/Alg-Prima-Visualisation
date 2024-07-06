@@ -6,6 +6,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.geom.Line2D;
 import java.awt.image.RenderedImage;
 import java.awt.image.RescaleOp;
 import java.awt.geom.AffineTransform;
@@ -14,6 +15,7 @@ import java.io.File;
 import java.io.IOException;
 import javax.imageio.ImageIO;
 import java.awt.image.AffineTransformOp;
+import java.util.ArrayList;
 
 
 public class ToolBarItems extends JComponent {
@@ -66,7 +68,14 @@ public class ToolBarItems extends JComponent {
     private boolean rightArrowButtonHovered = false;
     private boolean leftArrowButtonHovered = false;
 
-    public ToolBarItems() {
+    private int currentIteration = 0;
+    private ArrayList<Edge> result = new ArrayList<>();
+    private boolean stepsClicked = false;
+
+
+    private final RoundedRectangleCalculatorComponent roundedRectangleCalculatorComponent;
+
+    public ToolBarItems(RoundedRectangleCalculatorComponent roundedRectangleCalculatorComponent) {
         try {
             menuImage = ImageIO.read(new File("./src/main/resources/images/menu.png"));
             runImage = ImageIO.read(new File("./src/main/resources/images/run.png"));
@@ -121,8 +130,9 @@ public class ToolBarItems extends JComponent {
         } catch (IOException e){
             System.out.println("Failed to load image: " + e.getMessage());
         }
-
+        this.roundedRectangleCalculatorComponent = roundedRectangleCalculatorComponent;
         setLayout(null);
+
 
         menuButton = new JButton();
         runButton = new JButton();
@@ -206,6 +216,8 @@ public class ToolBarItems extends JComponent {
         @Override
         public void actionPerformed(ActionEvent e) {
             if (e.getSource() == menuButton) {
+                roundedRectangleCalculatorComponent.resetMst();
+                stepsClicked = false;
                 menuButtonPressed = true;
                 runButtonPressed = false;
                 stepsButtonPressed = false;
@@ -213,7 +225,10 @@ public class ToolBarItems extends JComponent {
                 uploadButtonPressed = false;
                 rightArrowButtonPressed = false;
                 leftArrowButtonPressed = false;
+                roundedRectangleCalculatorComponent.showAlgorithmSelectionDialog();
             } else if (e.getSource() == runButton) {
+                roundedRectangleCalculatorComponent.resetMst();
+                stepsClicked = false;
                 menuButtonPressed = false;
                 runButtonPressed = true;
                 stepsButtonPressed = false;
@@ -221,7 +236,14 @@ public class ToolBarItems extends JComponent {
                 uploadButtonPressed = false;
                 rightArrowButtonPressed = false;
                 leftArrowButtonPressed = false;
+                Graph graphPrima = roundedRectangleCalculatorComponent.getGraph();
+                result = graphPrima.runPrimsAlgorithm(); // Выполнение алгоритма Прима и получение результата
+                roundedRectangleCalculatorComponent.setMst(result); // Передача результата в компонент
             } else if (e.getSource() == stepsButton) {
+                result.clear();
+                updateMst();
+                stepsClicked = true;
+                roundedRectangleCalculatorComponent.resetMst();
                 menuButtonPressed = false;
                 runButtonPressed = false;
                 stepsButtonPressed = true;
@@ -229,7 +251,13 @@ public class ToolBarItems extends JComponent {
                 uploadButtonPressed = false;
                 rightArrowButtonPressed = false;
                 leftArrowButtonPressed = false;
+                Graph graphPrima = roundedRectangleCalculatorComponent.getGraph();
+                result = graphPrima.runPrimsAlgorithm();
+                currentIteration = 0;
+
             } else if (e.getSource() == downloadButton) {
+                roundedRectangleCalculatorComponent.resetMst();
+                stepsClicked = false;
                 menuButtonPressed = false;
                 runButtonPressed = false;
                 stepsButtonPressed = false;
@@ -237,7 +265,14 @@ public class ToolBarItems extends JComponent {
                 uploadButtonPressed = false;
                 rightArrowButtonPressed = false;
                 leftArrowButtonPressed = false;
+                JFileChooser fileChooser = new JFileChooser();
+                int option = fileChooser.showOpenDialog(null);
+                if (option == JFileChooser.APPROVE_OPTION) {
+                    File file = fileChooser.getSelectedFile();
+                    roundedRectangleCalculatorComponent.loadGraphFromFile(file.getAbsolutePath());
+                }
             } else if (e.getSource() == uploadButton) {
+                roundedRectangleCalculatorComponent.resetMst();
                 menuButtonPressed = false;
                 runButtonPressed = false;
                 stepsButtonPressed = false;
@@ -245,6 +280,13 @@ public class ToolBarItems extends JComponent {
                 uploadButtonPressed = true;
                 rightArrowButtonPressed = false;
                 leftArrowButtonPressed = false;
+                JFileChooser fileChooser = new JFileChooser();
+                int option = fileChooser.showSaveDialog(null);
+                if (option == JFileChooser.APPROVE_OPTION) {
+                    File file = fileChooser.getSelectedFile();
+                    roundedRectangleCalculatorComponent.saveGraphToFile(file.getAbsolutePath());
+                }
+
             } else if (e.getSource() == rightArrowButton) {
                 menuButtonPressed = false;
                 runButtonPressed = false;
@@ -253,6 +295,12 @@ public class ToolBarItems extends JComponent {
                 uploadButtonPressed = false;
                 rightArrowButtonPressed = true;
                 leftArrowButtonPressed = false;
+                if (stepsClicked){
+                    if (currentIteration < result.size()) {
+                        currentIteration++;
+                        updateMst();
+                    }
+                }
             } else if (e.getSource() == leftArrowButton) {
                 menuButtonPressed = false;
                 runButtonPressed = false;
@@ -261,11 +309,17 @@ public class ToolBarItems extends JComponent {
                 uploadButtonPressed = false;
                 rightArrowButtonPressed = false;
                 leftArrowButtonPressed = true;
+                if (stepsClicked){
+                    if (currentIteration > 0) {
+                        currentIteration--;
+                        updateMst();
+                    }
+                }
             }
             repaint();
 
 
-            Timer timer = new Timer(300, new ActionListener() {
+            Timer timer = new Timer(200, new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent evt) {
                     menuButtonPressed = false;
@@ -482,6 +536,8 @@ public class ToolBarItems extends JComponent {
         g2d.drawRenderedImage(rightArrowImageToDraw, atRightArrow);
         g2d.drawRenderedImage(leftArrowImageToDraw, atLeftArrow);
 
+
+
         menuButton.setBounds(xMenu, yMenu, newMenuWidth, newMenuHeight);
         runButton.setBounds(xRun, yRun, newRunWidth, newRunHeight);
         stepsButton.setBounds(xSteps, ySteps, newStepsWidth, newStepsHeight);
@@ -491,12 +547,8 @@ public class ToolBarItems extends JComponent {
         leftArrowButton.setBounds(xLeftArrow,yLeftArrow, newLeftArrowWidth, newLeftArrowHeight);
     }
 
-    boolean isDownloadButtonPressed(){
-        return downloadButtonPressed;
+    void updateMst() {
+        ArrayList<Edge> currentEdges = new ArrayList<>(result.subList(0, currentIteration));
+        roundedRectangleCalculatorComponent.setMst(currentEdges);
     }
-
-    boolean isUploadButtonPressed(){
-        return uploadButtonPressed;
-    }
-
 }

@@ -31,10 +31,10 @@ public class CalculatorNavigation extends JComponent {
     private BufferedImage arrowImagePressed;
     private BufferedImage urnImagePressed;
 
-    private JButton handButton;
-    private JButton plusButton;
-    private JButton urnButton;
-    private JButton arrowButton;
+    public JButton handButton;
+    public JButton plusButton;
+    public JButton urnButton;
+    public JButton arrowButton;
 
     private boolean handButtonPressed;
     private boolean plusButtonPressed;
