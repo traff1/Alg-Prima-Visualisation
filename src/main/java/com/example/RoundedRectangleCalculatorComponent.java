@@ -31,7 +31,7 @@ public class RoundedRectangleCalculatorComponent extends JComponent {
     public boolean actionSave = false;
     public boolean actionPreviousStep = false;
     public boolean actionNextStep = false;
-
+    public int num = 0;
     private boolean algPrimaSelected = false;
 
     public RoundedRectangleCalculatorComponent(CalculatorNavigation navigation) {
@@ -419,6 +419,7 @@ public class RoundedRectangleCalculatorComponent extends JComponent {
                 double relativeY = Double.parseDouble(vertexData[2]);
                 Vertex vertex = new Vertex(new Point((int)(relativeX * getWidth()), (int)(relativeY * getHeight())), number, getWidth(), getHeight());
                 vertices.add(vertex);
+
             }
 
             // Считываем количество рёбер
@@ -434,7 +435,7 @@ public class RoundedRectangleCalculatorComponent extends JComponent {
                     edges.add(new Edge(startVertex, endVertex, weight, getWidth(), getHeight()));
                 }
             }
-
+            vertexCounter = vertices.get(vertices.size()-1).getNumber();
             repaint();
         } catch (IOException e) {
             e.printStackTrace();
