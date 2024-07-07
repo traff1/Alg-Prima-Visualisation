@@ -464,15 +464,20 @@ public class RoundedRectangleCalculatorComponent extends JComponent {
         for (Edge edge : mst) {
             edge.setInMst(true); // Установим поле для рёбер из MST
         }
-        String start = String.format("Algorithm started!");
-        steps.add(start);
-        for (int i = 0; i < mst.size(); i++) {
-            String step = String.format("Step №%d: Edge: %d - %d", i+1, mst.get(i).getStartVertex().getNumber(), mst.get(i).getEndVertex().getNumber());
-            steps.add(step);  // Сохраняем шаги
-        }
-        if (mst.size() == vertices.size()-1){
-            String end = String.format("Algorithm ended!");
-            steps.add(end);
+        if (!mst.isEmpty()) {
+            String start = String.format("Algorithm started!");
+            steps.add(start);
+            for (int i = 0; i < mst.size(); i++) {
+                String step = String.format("Step №%d: Edge: %d - %d", i + 1, mst.get(i).getStartVertex().getNumber(), mst.get(i).getEndVertex().getNumber());
+                steps.add(step);  // Сохраняем шаги
+            }
+            if (mst.size() == vertices.size() - 1) {
+                String end = String.format("Algorithm ended!");
+                steps.add(end);
+            }
+        } else {
+            String start = String.format("Algorithm not applicable");
+            steps.add(start);
         }
         repaint(); // Перерисовать компонент для отображения изменений
     }

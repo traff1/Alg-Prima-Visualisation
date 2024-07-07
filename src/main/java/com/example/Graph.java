@@ -23,8 +23,37 @@ public class Graph implements Serializable {
         return edges;
     }
 
+    public boolean isConnected() {
+        if (vertices.isEmpty()) {
+            return true;
+        }
+
+        Set<Vertex> visited = new HashSet<>();
+        Stack<Vertex> stack = new Stack<>();
+
+        stack.push(vertices.get(0));
+        while (!stack.isEmpty()) {
+            Vertex current = stack.pop();
+            if (!visited.contains(current)) {
+                visited.add(current);
+                for (Edge edge : edges) {
+                    if (edge.getStartVertex().equals(current) && !visited.contains(edge.getEndVertex())) {
+                        stack.push(edge.getEndVertex());
+                    } else if (edge.getEndVertex().equals(current) && !visited.contains(edge.getStartVertex())) {
+                        stack.push(edge.getStartVertex());
+                    }
+                }
+            }
+        }
+        return visited.size() == vertices.size();
+    }
+
     public ArrayList<Edge> runPrimsAlgorithm() {
         if (vertices.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        if (vertices.isEmpty() || !this.isConnected()) {
             return new ArrayList<>();
         }
 

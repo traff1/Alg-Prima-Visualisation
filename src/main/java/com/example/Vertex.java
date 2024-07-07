@@ -10,7 +10,6 @@ public class Vertex extends Point implements Serializable{
     double relativeX;
     double relativeY;
     private static final int VERTEX_RADIUS = 25;
-    private static final double EDGE_ADJUSTMENT_FACTOR = 1.1;
 
     Vertex(Point point, int number, int screenWidth, int screenHeight) {
         super(point);
